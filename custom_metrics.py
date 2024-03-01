@@ -1,6 +1,5 @@
 import torch
-from torchmetrics import Metric
-from torchmetrics.functional import f1_score
+from torchmetrics import F1Score, Metric
 from torchmetrics.utilities import dim_zero_cat
 
 
@@ -11,6 +10,7 @@ class PerClassF1score(Metric):
         self.add_state("preds", default=[], dist_reduce_fx="cat")
         self.add_state("target", default=[], dist_reduce_fx="cat")
         self.labels=range(num_classes)
+        self.f1_score=F1Score(task="multiclass", num_classes=num_classes,average=None)
         self.labels_names=class_names
 
     def update(self, logits:torch.Tensor, target: torch.Tensor) -> None:
@@ -21,6 +21,6 @@ class PerClassF1score(Metric):
     def compute(self):
         preds = dim_zero_cat(self.preds).int()
         target = dim_zero_cat(self.target).int()
-        f1_scores=f1_score(preds,target,average=None,task="multiclass",num_classes=len(self.labels))
+        f1_scores=self.f1_score(preds,target)
         f1_scores = {self.labels_names[label]:score for label,score in zip(self.labels,f1_scores)}
         return f1_scores
